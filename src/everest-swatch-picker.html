@@ -1,0 +1,213 @@
+<link rel="import" href="../bower_components/paper-swatch-picker/paper-swatch-picker.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/web-animations-js/web-animations-next-lite.min.html">
+<link rel="import" href="../bower_components/vaadin-upload/vaadin-upload.html">
+<link rel="import" href="../bower_components/paper-slider/paper-slider.html">
+<link rel="import" href="../bower_components/paper-toggle-button/paper-toggle-button.html">
+<link rel="import" href="../bower_components/iron-pages/iron-pages.html">
+<link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/iron-icons/editor-icons.html">
+<link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
+
+<dom-module id="everest-swatch-picker">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+
+      paper-icon-button {
+        color: var(--swatch-picker-bg);
+      }
+
+      paper-swatch-picker {
+        --paper-swatch-picker-icon: {
+          color: white;
+        }
+      }
+
+      file-upload {
+        --paper-button: {
+          border-radius: 100%;
+          width: 56px;
+          height: 56px;
+          min-width: 56px;
+          background: black;
+          color: white;
+          margin-bottom: 0px!important;
+        }
+      }
+
+      .swatch-picker {
+        display: inline-block;
+        border-radius: 50%;
+        background-color: var(--swatch-picker-bg);
+      }
+
+       [hidden] {
+         display: none;
+       }
+    </style>
+    <iron-pages selected="{{mode}}" attr-for-selected="name">
+
+      <div class="image" name="image">
+        <vaadin-upload 
+          nodrop 
+          max-files="1" 
+          accept="image/*" 
+          method="POST" 
+          form-data-name="cover" 
+          target="http://localhost:3000/upload" 
+          on-upload-success="_imageChanged">
+        </vaadin-upload>
+      </div>
+
+      <div class="color" name="color">
+        <div class="swatch-picker">
+          <paper-swatch-picker color="{{color}}" noink horizontal-align="right"></paper-swatch-picker>
+        </div>
+      </div>
+
+      <div class="number" name="number">
+        <paper-slider value="[[default]]" editable on-immediate-value-changed='_sizeChanged'></paper-slider>
+      </div>
+
+      <div class="toggle" name="toggle">
+        <paper-toggle-button noink checked="{{check}}"></paper-toggle-button>
+      </div>
+
+      <div class="selector" name="selector">
+        <paper-menu-button>
+            <paper-icon-button icon="icons:open-with" slot="dropdown-trigger" horizontal-align="right"></paper-icon-button>
+            <paper-listbox slot="dropdown-content" selected="{{position}}" attr-for-selected="value">
+                <paper-item value="top">
+                    <iron-icon icon="editor:vertical-align-top"></iron-icon>Top</paper-item>
+                <paper-item value="center">
+                    <iron-icon icon="editor:vertical-align-center"></iron-icon>Center</paper-item>
+                <paper-item value="bottom">
+                    <iron-icon icon="editor:vertical-align-bottom"></iron-icon>Bottom</paper-item>
+            </paper-listbox>
+        </paper-menu-button>
+      </div>
+    </iron-pages>
+  </template>
+  <script>
+    Polymer({
+      is: 'everest-swatch-picker',
+
+      properties: {
+        color: {
+          type: String,
+          notify: true
+        },
+
+        image: {
+          type: String,
+          notify: true
+        },
+
+        imageBaseSf: {
+          type: String,
+          notify: true
+        },
+
+        size: {
+          type: String,
+          notify: true
+        },
+
+        position: {
+          type: String,
+          notify: true
+        },
+
+        check: {
+          type: Boolean,
+          notify: true
+        },
+
+        display: {
+          type: Boolean,
+          notify: true
+        },
+
+        mode: {
+          type: String
+        },
+
+        asBackground: {
+          type: Boolean,
+          value: false
+        },
+ 
+        default: {
+          type: String,
+        }
+      },
+
+      observers: [
+        '__colorChanged(color)',
+        '__bannerSizeChanged(check)'
+      ],
+
+      _imageChanged: function(e, detail) {
+        var cdn = "http://localhost:3000/images/";
+        var parsedResponse = JSON.parse(detail.xhr.response);
+        var image = cdn + parsedResponse.imageName;
+        var base64Image = parsedResponse.imageBase64;
+        if(this.asBackground)
+          this.set('image', 'url("'+ image +'")');
+        else
+          this.set('image', image);
+        this.set('imageBaseSf', base64Image);
+        console.log(this.imageBase64);
+      },
+
+      _sizeChanged:function(object) {
+        this.set('size', object.detail.value+"px");
+      },
+
+      __bannerSizeChanged:function(e) {
+        if(e == true)
+          this.set('display', 'cover');
+        else
+          this.set('display', 'contains');
+      },
+
+      // Only triggered when the swatch picker changed
+      __colorChanged: function (value) {
+        if (!value) {
+          value = "#fefefe";
+        }
+        this.updateStyles({'--swatch-picker-bg' : this.__invertColor(value)});
+      },
+
+      __invertColor: function (hex) {
+          if (hex.indexOf('#') === 0) {
+              hex = hex.slice(1);
+          }
+          // convert 3-digit hex to 6-digits.
+          if (hex.length === 3) {
+              hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+          }
+          if (hex.length !== 6) {
+              throw new Error('Invalid HEX color.');
+          }
+          // invert color components
+          var r = (255 - parseInt(hex.slice(0, 2), 16)).toString(16),
+              g = (255 - parseInt(hex.slice(2, 4), 16)).toString(16),
+              b = (255 - parseInt(hex.slice(4, 6), 16)).toString(16);
+          // pad each with zeros and return
+          return '#' + this.__padZero(r) + this.__padZero(g) + this.__padZero(b);
+      },
+
+      __padZero: function (str, len) {
+          len = len || 2;
+          var zeros = new Array(len).join('0');
+          return (zeros + str).slice(-len);
+      }
+    });
+  </script>
+</dom-module>
