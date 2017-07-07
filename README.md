@@ -47,8 +47,8 @@ Second, install [Bower](https://bower.io/) using [npm](https://www.npmjs.com)
 
 ##### Initialize project from template
 
-    mkdir my-app
-    cd my-app
+    mkdir everest-app
+    cd everest-app
     polymer init starter-kit
 
 ### Start the development server
